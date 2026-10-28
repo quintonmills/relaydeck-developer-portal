@@ -1,0 +1,146 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "RelayDeck API",
+    "version": "1.0.0",
+    "description": "Manage webhook destinations and inspect event deliveries."
+  },
+  "servers": [
+    {
+      "url": "https://api.relaydeck.dev/v1",
+      "description": "Production"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Events",
+      "description": "Webhook event delivery operations"
+    }
+  ],
+  "paths": {
+    "/events": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "List recent events",
+        "operationId": "listEvents",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum events to return",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Event" }
+                    }
+                  },
+                  "required": ["data"]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/deliveries/{delivery_id}": {
+      "get": {
+        "tags": ["Events"],
+        "summary": "Retrieve a webhook delivery",
+        "operationId": "getDelivery",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "delivery_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Delivery" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API token"
+      }
+    },
+    "schemas": {
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "evt_01HX8M9QK4" },
+          "type": { "type": "string", "example": "event.created" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "data": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["id", "type", "created_at", "data"]
+      },
+      "Delivery": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "wh_01HX8M9QK4" },
+          "event_id": { "type": "string", "example": "evt_01HX8M9QK4" },
+          "status_code": { "type": "integer", "example": 200 },
+          "attempt_count": { "type": "integer", "example": 1 },
+          "delivered_at": { "type": "string", "format": "date-time", "nullable": true }
+        },
+        "required": ["id", "event_id", "attempt_count"]
+      },
+      "Problem": {
+        "type": "object",
+        "description": "RFC 7807 problem details",
+        "properties": {
+          "type": { "type": "string", "format": "uri" },
+          "title": { "type": "string" },
+          "status": { "type": "integer" },
+          "detail": { "type": "string" },
+          "instance": { "type": "string", "format": "uri-reference" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Authentication required",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/problem+json": {
+            "schema": { "$ref": "#/components/schemas/Problem" }
+          }
+        }
+      }
+    }
+  }
+}
